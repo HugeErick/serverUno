@@ -1,0 +1,16 @@
+{
+  "name": "serveruno",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "go": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
