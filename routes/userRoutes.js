@@ -5,9 +5,13 @@ const pool = require('../dbConfig');
 const { userSchema, pswSchema } = require('../userValidator');
 const bcrypt = require('bcrypt'); 
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 router.use(bodyParser.json());
 router.use(cookieParser());
+
+const JWT_SECRET = process.env.JWT_SECRET 
 
 router.get('/', (req, res) => {
   res.send('Users controller ok');
@@ -26,13 +30,16 @@ router.post('/api/caccount', async (req, res) => {
     userSchema.parse({ username });
     pswSchema.parse({ password });
   } catch (validationError) {
-    return res.status(400).json({ error: validationError.errors });
+    return res.status(400).json({
+      error: 'Validation error',
+      details: validationError.errors.map(err => ({ path: err.path, message: err.message }))
+    });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10); // Hash the password
     const connection = await pool.getConnection();
-    const rows = await connection.query('SELECT COUNT(*) AS count FROM users WHERE username = ?', [username]);
+    const rows = await connection.query('SELECT COUNT(*) AS count FROM user WHERE username = ?', [username]);
 
     if (rows[0].count > 0) {
       connection.release();
@@ -40,7 +47,7 @@ router.post('/api/caccount', async (req, res) => {
     }
 
     const result = await connection.query(
-      'INSERT INTO users (username, password) VALUES (?, ?)',
+      'INSERT INTO user (username, password) VALUES (?, ?)',
       [username, hashedPassword]
     );
     connection.release();
@@ -66,7 +73,7 @@ router.post('/api/login', async (req, res) => {
 
   try {
     const connection = await pool.getConnection();
-    const rows = await connection.query('SELECT * FROM users WHERE username = ?', [username]);
+    const rows = await connection.query('SELECT * FROM user WHERE username = ?', [username]);
     connection.release();
 
     if (rows.length === 0) {
@@ -81,12 +88,40 @@ router.post('/api/login', async (req, res) => {
     }
 
 		//successfull case
-		res.cookie('session', { userId: user.id }, {httpOnly: true , secure: process.env.NODE_ENV === 'production'})
-    res.status(200).json({ message: 'Login successful', userId: user.id });
-  } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+		// Create JWT token with the user's role
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '2d' });
+    res.cookie('session', token, { httpOnly: true, secure: false });
+    res.status(200).json({ message: 'Login successful', userId: user.id, role: user.role });
+		} catch (error) {
+			console.error('Error logging in:', error);
+			res.status(500).json({ error: 'Internal Server Error' });
+		}
 });
+
+router.get('/api/renewsession', (req, res) => {
+  const token = req.cookies.session;
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const newToken = jwt.sign({ userId: decoded.userId, role: decoded.role }, JWT_SECRET, { expiresIn: '2d' });
+    res.cookie('session', newToken, { httpOnly: true, secure: false });
+
+    res.json({ message: 'Cookie renewed' });
+  });
+});
+
+router.post('/api/logout',(req, res) => {
+	res.clearCookie('session');
+	res.status(200).json({
+		message : 'Logout successful'
+	});
+});
+
 
 module.exports = router;
