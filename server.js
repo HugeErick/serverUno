@@ -5,6 +5,8 @@ const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 require('dotenv').config();
+const cockroachPool = require('./dbCockroachConfig');
+const createTables = require('./initDB');
 
 const app =  express();
 const port = process.env.PORT || 4000;
@@ -16,7 +18,18 @@ app.use(
 		extended : true,
 	})
 );
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+const allowedOrigins = ['http://localhost:5173', 'https://www.nurfurcoxtesten.com'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET
@@ -61,8 +74,12 @@ app.get('/api/protected', verifyJWT, (req, res) => {
 
 const userRouters = require('./routes/userRoutes');
 const videoRouters = require('./routes/videoRoutes');
+const jamRoutes = require('./routes/jamRoutes');
 app.use('/', userRouters);
 app.use('/', videoRouters);
+app.use('/', jamRoutes);
+
+createTables().catch((err) => console.error('Error initializing the database:', err));
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${port}`);
