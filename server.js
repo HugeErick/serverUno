@@ -72,6 +72,15 @@ app.get('/api/protected', verifyJWT, (req, res) => {
   res.json({ message: `Hello user ${req.userId}`, role: req.user.role });
 });
 
+app.get('/api/notToday', verifyJWT, (req, res) => {
+	const role = req.user.role;
+	if (role !== 'admin') {
+		res.status(403).json({error : Forbidden});
+	} else {
+		res.status(200).json({ message : `Hello ${req.user.username}`, role: role });
+	}
+})
+
 const userRouters = require('./routes/userRoutes');
 const videoRouters = require('./routes/videoRoutes');
 const jamRoutes = require('./routes/jamRoutes');

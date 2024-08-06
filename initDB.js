@@ -43,6 +43,16 @@ const createTables = async () => {
       );
     `;
 
+    const createFilesTable = `
+      CREATE TABLE IF NOT EXISTS files (
+        id SERIAL PRIMARY KEY,
+        path VARCHAR(255),
+        filename VARCHAR(100),
+        filetype VARCHAR(50),
+        admin_id INT
+      );
+    `;
+
     const createCourseVideosTable = `
       CREATE TABLE IF NOT EXISTS course_videos (
         course_id INT,
@@ -55,6 +65,7 @@ const createTables = async () => {
     await client.query(createCoursesTable);
     await client.query(createLikesTable);
     await client.query(createVideosTable);
+    await client.query(createFilesTable);
     await client.query(createCourseVideosTable);
 
     console.log('Tables created successfully');
