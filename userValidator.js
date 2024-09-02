@@ -1,9 +1,10 @@
 const { z } =  require('zod');
 
 const pswSchema = z.object({
-  password: z.string().min(6).max(20).regex(/[A-Z]/, "must contain at least one uppercase letter")
-    .regex(/[a-z]/, "must contain at least one lowercase letter")
-    .regex(/[0-9]/, "must contain at least one number"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(30, "Password must not exceed 30 characters"),
 });
 
 const userSchema = z.object({
